@@ -1,11 +1,10 @@
 import os
-from flask import Flask, jsonify, redirect
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
 @app.get("/")
 def root():
-    # keep it simple; you can redirect instead: return redirect("/health", code=302)
     return jsonify(ok=True, service="ottomate-health", path="/")
 
 @app.get("/health")
