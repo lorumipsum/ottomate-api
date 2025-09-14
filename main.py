@@ -1,5 +1,4 @@
-import os, json, logging
-from flask import Flask, request, jsonify
+nano main.pyimport os, json, logging from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +38,10 @@ def bad_request(e):
 @app.errorhandler(404)
 def not_found(e):
     return jsonify(ok=False, error="not_found"), 404
+@app.get("/ready")
+def ready():
+    ok = True if os.getenv("LIM_API_KEY") else False
+    return (jsonify(ok=ok), 200) if ok else (jsonify(ok=False), 503)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
