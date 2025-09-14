@@ -13,9 +13,16 @@ def root():
 def health():
     return jsonify(ok=True)
 
+@app.get("/version")
+def version():
+    return jsonify(
+        ok=True,
+        revision=os.getenv("K_REVISION","unknown"),
+        project=os.getenv("GOOGLE_CLOUD_PROJECT","unknown")
+    )
+
 @app.post("/echo")
 def echo():
-    # Echoes any JSON you send, with basic validation
     if not request.is_json:
         return jsonify(ok=False, error="Expected application/json"), 400
     body = request.get_json(silent=True)
@@ -24,16 +31,7 @@ def echo():
     app.logger.info("echo payload=%s", json.dumps(body)[:2000])
     return jsonify(ok=True, received=body)
 
-@app.get("/version")
-def version():
-    # Useful for debugging what is live
-    return jsonify(
-        ok=True,
-        revision=os.getenv("K_REVISION", "unknown"),
-        project=os.getenv("GOOGLE_CLOUD_PROJECT", "unknown")
-    )
-
-# Error handlers for cleaner 4xx/5xx JSON
+# Error handlers
 @app.errorhandler(400)
 def bad_request(e):
     return jsonify(ok=False, error="bad_request"), 400
