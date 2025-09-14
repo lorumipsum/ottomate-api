@@ -1,4 +1,5 @@
-nano main.pyimport os, json, logging from flask import Flask, request, jsonify
+import os, json, logging
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -16,8 +17,8 @@ def health():
 def version():
     return jsonify(
         ok=True,
-        revision=os.getenv("K_REVISION","unknown"),
-        project=os.getenv("GOOGLE_CLOUD_PROJECT","unknown")
+        revision=os.getenv("K_REVISION", "unknown"),
+        project=os.getenv("GOOGLE_CLOUD_PROJECT", "unknown"),
     )
 
 @app.post("/echo")
@@ -30,6 +31,12 @@ def echo():
     app.logger.info("echo payload=%s", json.dumps(body)[:2000])
     return jsonify(ok=True, received=body)
 
+# --- readiness that depends on env ---
+@app.get("/ready")
+def ready():
+    ok = True if os.getenv("LIM_API_KEY") else False
+    return (jsonify(ok=ok), 200) if ok else (jsonify(ok=False), 503)
+
 # Error handlers
 @app.errorhandler(400)
 def bad_request(e):
@@ -38,10 +45,6 @@ def bad_request(e):
 @app.errorhandler(404)
 def not_found(e):
     return jsonify(ok=False, error="not_found"), 404
-@app.get("/ready")
-def ready():
-    ok = True if os.getenv("LIM_API_KEY") else False
-    return (jsonify(ok=ok), 200) if ok else (jsonify(ok=False), 503)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
