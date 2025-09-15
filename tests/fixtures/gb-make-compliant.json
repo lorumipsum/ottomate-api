@@ -1,0 +1,33 @@
+{
+  "version": "v1.0",
+  "triggerId": "gmail-urgent-trigger",
+  "modules": [
+    {
+      "id": "gmail-urgent-trigger",
+      "type": "trigger",
+      "name": "Gmail Urgent Email Trigger",
+      "params": {
+        "app": "Gmail",
+        "trigger_type": "email",
+        "filter": "subject:URGENT"
+      }
+    },
+    {
+      "id": "slack-notification",
+      "type": "action", 
+      "name": "Send Slack Notification",
+      "params": {
+        "app": "Slack",
+        "action_type": "send_message",
+        "channel": "#alerts",
+        "message": "Urgent email received: {{gmail-urgent-trigger.subject}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "gmail-urgent-trigger",
+      "to": "slack-notification"
+    }
+  ]
+}

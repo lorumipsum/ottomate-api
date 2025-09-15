@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Dict, Any, List
 from jsonschema import Draft202012Validator
-from app.lint_rules import ALL_RULES
+from app.lint_rules_make import ALL_MAKE_RULES
 
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schema" / "blueprint.schema.json"
 
@@ -19,6 +19,6 @@ def lint(bp: Dict[str, Any]) -> Dict[str, Any]:
     violations: List[Dict[str, str]] = []
     violations.extend(validate_schema(bp))
     if not violations:
-        for rule in ALL_RULES:
+        for rule in ALL_MAKE_RULES:
             violations.extend(rule(bp))
     return {"ok": len(violations) == 0, "violations": violations, "count": len(violations)}
