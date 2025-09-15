@@ -1,3 +1,6 @@
+import os
+import time
+from pathlib import Path
 import json
 import os
 from flask import Flask, request, jsonify
@@ -273,3 +276,88 @@ def list_jobs():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
+
+# Import the new modules
+from app.export_pack import export_pack_generator
+from app.gcs_storage import gcs_storage
+
+@app.post("/jobs/<job_id>:export")
+def export_job(job_id):
+    """Export a completed job as a ZIP package."""
+    try:
+        # Get the job
+        job = brief_manager.get_job(job_id)
+        if not job:
+            return jsonify({"ok": False, "error": "Job not found"}), 404
+        
+        # Check if job is completed
+        if job.status.value != "completed":
+            return jsonify({
+                "ok": False, 
+                "error": f"Job must be completed to export (current status: {job.status.value})"
+            }), 400
+        
+        # Get the brief
+        brief = brief_manager.get_brief(job.brief_id)
+        if not brief:
+            return jsonify({"ok": False, "error": "Brief not found"}), 404
+        
+        # Get the blueprint from job result
+        if not job.result or "blueprint" not in job.result:
+            return jsonify({"ok": False, "error": "No blueprint found in job result"}), 400
+        
+        blueprint = job.result["blueprint"]
+        
+        # Generate export pack
+        success, result = export_pack_generator.generate_export_pack(
+            blueprint, brief.content, job_id
+        )
+        
+        if not success:
+            return jsonify({"ok": False, "error": result}), 500
+        
+        zip_file_path = result
+        
+        # Upload to GCS and get signed URL
+        remote_filename = f"exports/{job_id}/{os.path.basename(zip_file_path)}"
+        upload_success, signed_url_or_error = gcs_storage.upload_file(zip_file_path, remote_filename)
+        
+        if not upload_success:
+            # If GCS upload fails, still return local file info
+            return jsonify({
+                "ok": True,
+                "export": {
+                    "job_id": job_id,
+                    "local_file": zip_file_path,
+                    "download_url": f"/download/{os.path.basename(zip_file_path)}",
+                    "gcs_error": signed_url_or_error,
+                    "generated_at": time.time()
+                }
+            })
+        
+        return jsonify({
+            "ok": True,
+            "export": {
+                "job_id": job_id,
+                "download_url": signed_url_or_error,
+                "local_file": zip_file_path,
+                "generated_at": time.time()
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.get("/download/<filename>")
+def download_file(filename):
+    """Download a local export file."""
+    try:
+        file_path = Path("data/exports") / filename
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        from flask import send_file
+        return send_file(file_path, as_attachment=True)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
