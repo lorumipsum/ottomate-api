@@ -1,0 +1,24 @@
+{
+  "name": "Email to Slack Alert",
+  "description": "Forward urgent emails to Slack channel",
+  "version": "1.0.0",
+  "trigger": {
+    "type": "email",
+    "app": "Gmail",
+    "config": {
+      "filter": "subject:URGENT"
+    }
+  },
+  "actions": [
+    {
+      "id": "send_alert",
+      "type": "send",
+      "app": "Slack",
+      "config": {
+        "channel": "#alerts",
+        "message": "Urgent email: {{email.subject}}"
+      }
+    }
+  ],
+  "tags": ["email", "alerts"]
+}

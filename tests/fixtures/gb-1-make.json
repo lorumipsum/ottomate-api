@@ -1,0 +1,6 @@
+{
+  "version": "v1.0",
+  "triggerId": "webhook-1", 
+  "modules": [{"id": "webhook-1", "type": "webhook", "name": "Test", "params": {}}],
+  "connections": []
+}

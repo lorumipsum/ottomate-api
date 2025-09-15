@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ottomate.dev/blueprint.schema.json",
+  "title": "Make Blueprint",
+  "type": "object",
+  "required": ["version", "triggerId", "modules", "connections"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "pattern": "^v\\d+(\\.\\d+)?$" },
+    "triggerId": { "type": "string", "minLength": 1 },
+    "credentials": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "default": []
+    },
+    "policies": {
+      "type": "object",
+      "properties": {
+        "backoff": { "type": "boolean", "default": false },
+        "rateLimitRPS": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true,
+      "default": {}
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "name", "params"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "external": { "type": "boolean", "default": false },
+          "authRequired": { "type": "boolean", "default": false },
+          "throttled": { "type": "boolean", "default": false },
+          "iterates": { "type": "boolean", "default": false },
+          "hasLimiter": { "type": "boolean", "default": false },
+          "hasErrorHandler": { "type": "boolean", "default": false },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["field", "expectedType", "valueType"],
+              "properties": {
+                "field": { "type": "string" },
+                "expectedType": { "type": "string", "enum": ["string","number","boolean","date"] },
+                "valueType": { "type": "string", "enum": ["string","number","boolean","date"] }
+              },
+              "additionalProperties": false
+            },
+            "default": []
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "connections": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "required": ["from","to"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

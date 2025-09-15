@@ -1,0 +1,157 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Automation Blueprint",
+  "description": "Schema for defining Make.com automation workflows",
+  "type": "object",
+  "required": ["name", "version", "trigger", "actions"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable name for the automation",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of what this automation does",
+      "maxLength": 500
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version (e.g., 1.0.0 )"
+    },
+    "trigger": {
+      "type": "object",
+      "description": "The event that starts this automation",
+      "required": ["type", "app"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["webhook", "schedule", "email", "file_watch", "form_submit", "api_call"],
+          "description": "Type of trigger"
+        },
+        "app": {
+          "type": "string",
+          "description": "Source application (e.g., Gmail, Dropbox, Webhooks)"
+        },
+        "config": {
+          "type": "object",
+          "description": "Trigger-specific configuration",
+          "additionalProperties": true
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "Sequence of actions to perform",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "app"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "description": "Unique identifier for this action"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["create", "update", "delete", "send", "get", "transform", "condition", "delay"],
+            "description": "Type of action to perform"
+          },
+          "app": {
+            "type": "string",
+            "description": "Target application (e.g., Slack, Google Sheets, Email)"
+          },
+          "config": {
+            "type": "object",
+            "description": "Action-specific configuration and parameters",
+            "additionalProperties": true
+          },
+          "condition": {
+            "type": "object",
+            "description": "Optional condition to execute this action",
+            "properties": {
+              "field": {
+                "type": "string",
+                "description": "Field to check (can reference previous action outputs)"
+              },
+              "operator": {
+                "type": "string",
+                "enum": ["equals", "not_equals", "contains", "not_contains", "greater_than", "less_than", "exists", "not_exists"]
+              },
+              "value": {
+                "description": "Value to compare against"
+              }
+            },
+            "required": ["field", "operator", "value"]
+          },
+          "depends_on": {
+            "type": "array",
+            "description": "IDs of actions that must complete before this one",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "error_handling": {
+      "type": "object",
+      "description": "How to handle errors in this automation",
+      "properties": {
+        "retry_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 1
+        },
+        "on_error": {
+          "type": "string",
+          "enum": ["stop", "continue", "notify"],
+          "default": "stop"
+        },
+        "notification": {
+          "type": "object",
+          "description": "Where to send error notifications",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "slack_webhook": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "description": "Optional scheduling configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "timezone": {
+          "type": "string",
+          "default": "UTC"
+        },
+        "cron": {
+          "type": "string",
+          "description": "Cron expression for scheduled runs"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional tags for organization",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "version": "v2.1",
+  "triggerId": "gmail-1", 
+  "modules": [
+    {
+      "id": "gmail-1",
+      "type": "gmail",
+      "name": "Watch Emails",
+      "params": {}
+    }
+  ],
+  "connections": []
+}
