@@ -361,3 +361,155 @@ def download_file(filename):
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# Import test harness
+from app.test_harness import test_harness
+
+@app.post("/test/payloads")
+def create_test_payload():
+    """Create a new test payload."""
+    try:
+        data = request.get_json(force=True, silent=False)
+        
+        name = data.get("name")
+        description = data.get("description", "")
+        payload_data = data.get("data", {})
+        expected_output = data.get("expected_output")
+        
+        if not name or not payload_data:
+            return jsonify({"ok": False, "error": "Name and data are required"}), 400
+        
+        payload_id = test_harness.add_payload(name, description, payload_data, expected_output)
+        
+        return jsonify({
+            "ok": True,
+            "payload": {
+                "id": payload_id,
+                "name": name,
+                "description": description
+            }
+        }), 201
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.get("/test/payloads")
+def list_test_payloads():
+    """List all test payloads."""
+    try:
+        payloads = test_harness.list_payloads()
+        
+        payload_data = []
+        for payload in payloads:
+            payload_data.append({
+                "id": payload.id,
+                "name": payload.name,
+                "description": payload.description,
+                "created_at": payload.created_at
+            })
+        
+        return jsonify({
+            "ok": True,
+            "payloads": payload_data,
+            "count": len(payload_data)
+        })
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.post("/test/payloads/<payload_id>:run")
+def run_test(payload_id):
+    """Run a test with the specified payload."""
+    try:
+        data = request.get_json() or {}
+        webhook_url = data.get("webhook_url")
+        
+        result_id = test_harness.run_test(payload_id, webhook_url)
+        result = test_harness.get_result(result_id)
+        
+        if not result:
+            return jsonify({"ok": False, "error": "Test execution failed"}), 500
+        
+        return jsonify({
+            "ok": True,
+            "test_result": {
+                "id": result.id,
+                "payload_id": result.payload_id,
+                "status": result.status.value,
+                "execution_time": result.execution_time,
+                "webhook_url": result.webhook_url,
+                "created_at": result.created_at
+            }
+        }), 201
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.get("/test/results/<result_id>")
+def get_test_result(result_id):
+    """Get a specific test result."""
+    try:
+        result = test_harness.get_result(result_id)
+        
+        if not result:
+            return jsonify({"ok": False, "error": "Test result not found"}), 404
+        
+        return jsonify({
+            "ok": True,
+            "result": {
+                "id": result.id,
+                "payload_id": result.payload_id,
+                "status": result.status.value,
+                "execution_time": result.execution_time,
+                "response_data": result.response_data,
+                "error_message": result.error_message,
+                "webhook_url": result.webhook_url,
+                "created_at": result.created_at
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.get("/test/results")
+def list_test_results():
+    """List all test results."""
+    try:
+        payload_id = request.args.get("payload_id")
+        results = test_harness.list_results(payload_id)
+        
+        result_data = []
+        for result in results:
+            result_data.append({
+                "id": result.id,
+                "payload_id": result.payload_id,
+                "status": result.status.value,
+                "execution_time": result.execution_time,
+                "webhook_url": result.webhook_url,
+                "created_at": result.created_at,
+                "has_error": result.error_message is not None
+            })
+        
+        return jsonify({
+            "ok": True,
+            "results": result_data,
+            "count": len(result_data)
+        })
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.get("/test/summary")
+def get_test_summary():
+    """Get test execution summary."""
+    try:
+        payload_id = request.args.get("payload_id")
+        summary = test_harness.get_test_summary(payload_id)
+        
+        return jsonify({
+            "ok": True,
+            "summary": summary
+        })
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
