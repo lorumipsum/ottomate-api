@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OttoMate API Test Interface</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .endpoint-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .endpoint-title {
+            color: #2c5aa0;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        textarea, input[type="text"], input[type="url"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .response {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-color: #4CAF50;
+            background-color: #f0fff0;
+        }
+        .error {
+            border-color: #f44336;
+            background-color: #fff0f0;
+        }
+        .url-input {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .method-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .post { background-color: #ffa726; color: white; }
+        .get { background-color: #42a5f5; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 OttoMate API Test Interface</h1>
+
+        <div class="url-input">
+            <label for="baseUrl">API Base URL:</label>
+            <input type="url" id="baseUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+        </div>
+
+        <!-- Health Check -->
+        <div class="endpoint-section">
+            <div class="endpoint-title">
+                <span class="method-badge get">GET</span>/health - Health Check
+            </div>
+            <button onclick="testHealth()">Test Health</button>
+            <div id="healthResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Lint Blueprint -->
+        <div class="endpoint-section">
+            <div class="endpoint-title">
+                <span class="method-badge post">POST</span>/lint - Validate Blueprint
+            </div>
+            <label for="lintBlueprint">Blueprint JSON:</label>
+            <textarea id="lintBlueprint" placeholder='{"version": "v1.0", "triggerId": "test", "modules": [], "connections": []}'></textarea>
+            <button onclick="testLint()">Validate Blueprint</button>
+            <div id="lintResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Create Brief -->
+        <div class="endpoint-section">
+            <div class="endpoint-title">
+                <span class="method-badge post">POST</span>/briefs - Create Brief
+            </div>
+            <label for="briefContent">Brief Content:</label>
+            <textarea id="briefContent" placeholder="When I receive an urgent email, send a Slack notification to #alerts"></textarea>
+            <button onclick="createBrief()">Create Brief</button>
+            <div id="briefResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- List Briefs -->
+        <div class="endpoint-section">
+            <div class="endpoint-title">
+                <span class="method-badge get">GET</span>/briefs - List Briefs
+            </div>
+            <label for="briefLimit">Limit (optional):</label>
+            <input type="text" id="briefLimit" placeholder="10" style="width: 100px;">
+            <button onclick="listBriefs()">List Briefs</button>
+            <div id="briefsResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Generate Blueprint -->
+        <div class="endpoint-section">
+            <div class="endpoint-title">
+                <span class="method-badge post">POST</span>/briefs/{id}:generate - Generate Blueprint
+            </div>
+            <label for="generateBriefId">Brief ID:</label>
+            <input type="text" id="generateBriefId" placeholder="brief-id-from-list-above">
+            <button onclick="generateBlueprint()">Generate Blueprint</button>
+            <div id="generateResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- List Jobs -->
+        <div class="endpoint-section">
+            <div class="endpoint-title">
+                <span class="method-badge get">GET</span>/jobs - List Jobs
+            </div>
+            <button onclick="listJobs()">List Jobs</button>
+            <div id="jobsResponse" class="response" style="display:none;"></div>
+        </div>
+
+        <!-- Blueprint Diff -->
+        <div class="endpoint-section">
+            <div class="endpoint-title">
+                <span class="method-badge post">POST</span>/blueprints/diff - Compare Blueprints
+            </div>
+            <label for="blueprint1">Blueprint 1:</label>
+            <textarea id="blueprint1" placeholder='{"version": "v1.0", "triggerId": "test1", "modules": [], "connections": []}'></textarea>
+            <label for="blueprint2">Blueprint 2:</label>
+            <textarea id="blueprint2" placeholder='{"version": "v2.0", "triggerId": "test2", "modules": [], "connections": []}'></textarea>
+            <label for="diffFormat">Format:</label>
+            <select id="diffFormat" style="padding: 8px; margin-bottom: 10px;">
+                <option value="json">JSON</option>
+                <option value="text">Human Readable</option>
+            </select>
+            <button onclick="compareBluePrints()">Compare Blueprints</button>
+            <div id="diffResponse" class="response" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value || 'http://localhost:8080';
+        }
+
+        function showResponse(elementId, response, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `response ${isSuccess ? 'success' : 'error'}`;
+            element.textContent = JSON.stringify(response, null, 2);
+        }
+
+        async function makeRequest(endpoint, method = 'GET', body = null) {
+            try {
+                const url = getBaseUrl() + endpoint;
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(url, options);
+                const data = await response.json();
+
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: data
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function testHealth() {
+            const result = await makeRequest('/health');
+            showResponse('healthResponse', result, result.success);
+        }
+
+        async function testLint() {
+            const blueprintText = document.getElementById('lintBlueprint').value;
+            if (!blueprintText) {
+                showResponse('lintResponse', {error: 'Please enter a blueprint JSON'}, false);
+                return;
+            }
+
+            try {
+                const blueprint = JSON.parse(blueprintText);
+                const result = await makeRequest('/lint', 'POST', blueprint);
+                showResponse('lintResponse', result, result.success);
+            } catch (error) {
+                showResponse('lintResponse', {error: 'Invalid JSON: ' + error.message}, false);
+            }
+        }
+
+        async function createBrief() {
+            const content = document.getElementById('briefContent').value;
+            if (!content) {
+                showResponse('briefResponse', {error: 'Please enter brief content'}, false);
+                return;
+            }
+
+            const result = await makeRequest('/briefs', 'POST', {content: content});
+            showResponse('briefResponse', result, result.success);
+        }
+
+        async function listBriefs() {
+            const limit = document.getElementById('briefLimit').value;
+            const endpoint = limit ? `/briefs?limit=${limit}` : '/briefs';
+            const result = await makeRequest(endpoint);
+            showResponse('briefsResponse', result, result.success);
+        }
+
+        async function generateBlueprint() {
+            const briefId = document.getElementById('generateBriefId').value;
+            if (!briefId) {
+                showResponse('generateResponse', {error: 'Please enter a brief ID'}, false);
+                return;
+            }
+
+            const result = await makeRequest(`/briefs/${briefId}:generate`, 'POST');
+            showResponse('generateResponse', result, result.success);
+        }
+
+        async function listJobs() {
+            const result = await makeRequest('/jobs');
+            showResponse('jobsResponse', result, result.success);
+        }
+
+        async function compareBluePrints() {
+            const blueprint1Text = document.getElementById('blueprint1').value;
+            const blueprint2Text = document.getElementById('blueprint2').value;
+            const format = document.getElementById('diffFormat').value;
+
+            if (!blueprint1Text || !blueprint2Text) {
+                showResponse('diffResponse', {error: 'Please enter both blueprints'}, false);
+                return;
+            }
+
+            try {
+                const blueprint1 = JSON.parse(blueprint1Text);
+                const blueprint2 = JSON.parse(blueprint2Text);
+
+                const body = {
+                    blueprint1: blueprint1,
+                    blueprint2: blueprint2,
+                    format: format
+                };
+
+                const result = await makeRequest('/blueprints/diff', 'POST', body);
+                showResponse('diffResponse', result, result.success);
+            } catch (error) {
+                showResponse('diffResponse', {error: 'Invalid JSON: ' + error.message}, false);
+            }
+        }
+
+        // Test health on page load
+        window.onload = function() {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

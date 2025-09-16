@@ -1,9 +1,10 @@
 import os, json, logging
 from flask import Flask, request, jsonify
 from app.config import get_port, get_lim_api_key, LOG_TRUNCATE_LENGTH, DEFAULT_HOST
+from app.logging_config import setup_logging
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
+logger = setup_logging()
 
 @app.get("/")
 def root():

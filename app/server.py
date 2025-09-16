@@ -2,8 +2,11 @@ import os
 import time
 from pathlib import Path
 import json
-from flask import Flask, request, jsonify
+import logging
+from flask import Flask, request, jsonify, send_from_directory, send_file
+from app.logging_config import setup_logging, log_api_request
 from app.config import MIN_LIMIT, MAX_LIMIT, DEFAULT_LIMIT, DEFAULT_HOST, get_port
+from app.error_handler import api_error, not_found_error, server_error, bad_request_error, validation_error
 from app.lint_runner import lint
 from app.blueprint_generator import blueprint_generator
 from app.guardrails import guardrails
@@ -12,9 +15,46 @@ from app.job_runner import job_runner
 
 app = Flask(__name__)
 
+# Setup logging
+logger = setup_logging()
+
+@app.before_request
+def before_request():
+    """Log request start and setup timing."""
+    request.start_time = time.time()
+
+@app.after_request
+def after_request(response):
+    """Log request completion with timing and status."""
+    try:
+        duration = (time.time() - request.start_time) * 1000  # Convert to milliseconds
+        log_api_request(
+            endpoint=request.endpoint or request.path,
+            method=request.method,
+            status_code=response.status_code,
+            duration_ms=duration
+        )
+    except Exception as e:
+        logger.error(f"Failed to log request: {e}")
+
+    return response
+
 @app.get("/health")
 def health():
     return jsonify({"ok": True})
+
+@app.get("/")
+def index():
+    """Serve the HTML test interface."""
+    try:
+        return send_file("../static/index.html")
+    except FileNotFoundError:
+        return not_found_error("Test interface")
+
+@app.get("/static/<path:filename>")
+def static_files(filename):
+    """Serve static files."""
+    return send_from_directory("../static", filename)
 
 @app.get("/schema")
 def schema():
@@ -26,9 +66,9 @@ def schema():
             schema = json.load(f)
         return jsonify(schema)
     except FileNotFoundError:
-        return jsonify({"error": "Blueprint schema not found"}), 404
+        return not_found_error("Blueprint schema")
     except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON in schema file"}), 500
+        return server_error("Invalid JSON in schema file")
 
 @app.post("/lint")
 def lint_endpoint():
@@ -49,28 +89,34 @@ def generate_blueprint():
         return jsonify({"ok": False, "error": "Invalid JSON body"}), 400
     
     if not data or 'brief' not in data:
-        return jsonify({"ok": False, "error": "Missing 'brief' field in request"}), 400
-    
+        return bad_request_error("Request must include a 'brief' field with automation description")
+
     brief = data['brief']
     if not brief or not brief.strip():
-        return jsonify({"ok": False, "error": "Brief cannot be empty"}), 400
+        return bad_request_error("Brief content cannot be empty - please provide automation requirements")
     
     # Check if generator is available
     if not blueprint_generator.is_available():
-        return jsonify({
-            "ok": False,
-            "error": "Blueprint generator not available - OpenAI API key not configured"
-        }), 503
+        return api_error(
+            "Blueprint generator not available - OpenAI API key not configured in environment",
+            503
+        )
     
     # Generate blueprint
+    logger.info(f"Starting blueprint generation for brief: {brief[:100]}...")
+    generation_start = time.time()
+
     success, result = blueprint_generator.generate_blueprint(brief)
-    
+    generation_duration = (time.time() - generation_start) * 1000
+
     if success:
+        logger.info(f"Blueprint generation succeeded in {generation_duration:.2f}ms")
         return jsonify({
             "ok": True,
             "blueprint": result["blueprint"]
         })
     else:
+        logger.error(f"Blueprint generation failed in {generation_duration:.2f}ms: {result['error']}")
         return jsonify({
             "ok": False,
             "error": result["error"],
@@ -354,13 +400,13 @@ def download_file(filename):
     try:
         file_path = Path("data/exports") / filename
         if not file_path.exists():
-            return jsonify({"error": "File not found"}), 404
-        
+            return not_found_error("Export file", filename)
+
         from flask import send_file
         return send_file(file_path, as_attachment=True)
-        
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return server_error(exception=e)
 
 # Import test harness and blueprint diff
 from app.test_harness import test_harness
