@@ -1,5 +1,6 @@
 import os, json, logging
 from flask import Flask, request, jsonify
+from app.config import get_port, get_lim_api_key, LOG_TRUNCATE_LENGTH, DEFAULT_HOST
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -28,13 +29,13 @@ def echo():
     body = request.get_json(silent=True)
     if body is None:
         return jsonify(ok=False, error="Invalid JSON"), 400
-    app.logger.info("echo payload=%s", json.dumps(body)[:2000])
+    app.logger.info("echo payload=%s", json.dumps(body)[:LOG_TRUNCATE_LENGTH])
     return jsonify(ok=True, received=body)
 
 # --- readiness that depends on env ---
 @app.get("/ready")
 def ready():
-    ok = True if os.getenv("LIM_API_KEY") else False
+    ok = True if get_lim_api_key() else False
     return (jsonify(ok=ok), 200) if ok else (jsonify(ok=False), 503)
 
 # Error handlers
@@ -47,5 +48,4 @@ def not_found(e):
     return jsonify(ok=False, error="not_found"), 404
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host=DEFAULT_HOST, port=get_port())

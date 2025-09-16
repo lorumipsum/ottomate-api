@@ -6,8 +6,14 @@ Accepts sample payloads, simulates webhook calls, and records test results.
 import json
 import time
 import logging
-import requests
 from typing import Dict, Any, List, Tuple, Optional
+
+try:
+    import requests
+except ImportError:
+    requests = None
+
+from app.config import WEBHOOK_TIMEOUT_SECONDS
 from dataclasses import dataclass, asdict
 from enum import Enum
 import uuid
@@ -186,25 +192,29 @@ class TestHarness:
                     "timestamp": time.time()
                 }, None
             else:
-                # Try actual HTTP call with timeout
+                # Try actual HTTP call with timeout if requests is available
+                if requests is None:
+                    return False, None, "requests library not available for webhook calls"
+
                 response = requests.post(
                     webhook_url,
                     json=payload_data,
-                    timeout=10,
+                    timeout=WEBHOOK_TIMEOUT_SECONDS,
                     headers={"Content-Type": "application/json"}
                 )
-                
+
                 if response.status_code < 400:
                     return True, response.json() if response.content else {"status": "success"}, None
                 else:
                     return False, None, f"HTTP {response.status_code}: {response.text}"
                     
-        except requests.exceptions.Timeout:
-            return False, None, "Webhook call timed out"
-        except requests.exceptions.ConnectionError:
-            return False, None, "Could not connect to webhook URL"
         except Exception as e:
-            return False, None, f"Webhook call failed: {str(e)}"
+            if requests and "Timeout" in str(e):
+                return False, None, "Webhook call timed out"
+            elif requests and "ConnectionError" in str(e):
+                return False, None, "Could not connect to webhook URL"
+            else:
+                return False, None, f"Webhook call failed: {str(e)}"
     
     def _simulate_local_processing(self, payload_data: Dict[str, Any]) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
         """Simulate local processing of payload."""

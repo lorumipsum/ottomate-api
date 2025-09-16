@@ -7,6 +7,7 @@ import logging
 import os
 from typing import Dict, Any, Tuple, Optional
 from app.lint_runner import lint
+from app.config import get_openai_api_key, MOCK_BLUEPRINT_VERSION, MOCK_GMAIL_APP, MOCK_SLACK_APP, MOCK_SLACK_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class BlueprintGenerator:
     def _initialize_client(self):
         """Initialize OpenAI client if API key is available."""
         try:
-            api_key = os.getenv('OPENAI_API_KEY')
+            api_key = get_openai_api_key()
             if api_key:
                 # For now, we'll just store the key - actual OpenAI integration would go here
                 self.api_key = api_key
@@ -51,7 +52,7 @@ class BlueprintGenerator:
             # For demo purposes, return a mock blueprint
             # In production, this would call OpenAI API
             mock_blueprint = {
-                "version": "v1.0",
+                "version": MOCK_BLUEPRINT_VERSION,
                 "triggerId": "gmail-trigger",
                 "modules": [
                     {
@@ -59,7 +60,7 @@ class BlueprintGenerator:
                         "type": "trigger",
                         "name": "Gmail New Email",
                         "params": {
-                            "app": "Gmail",
+                            "app": MOCK_GMAIL_APP,
                             "trigger_type": "new_email",
                             "filter": brief
                         }
@@ -69,9 +70,9 @@ class BlueprintGenerator:
                         "type": "action",
                         "name": "Send Slack Message",
                         "params": {
-                            "app": "Slack",
+                            "app": MOCK_SLACK_APP,
                             "action_type": "send_message",
-                            "channel": "#alerts",
+                            "channel": MOCK_SLACK_CHANNEL,
                             "message": f"New email: {brief}"
                         }
                     }

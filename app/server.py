@@ -2,8 +2,8 @@ import os
 import time
 from pathlib import Path
 import json
-import os
 from flask import Flask, request, jsonify
+from app.config import MIN_LIMIT, MAX_LIMIT, DEFAULT_LIMIT, DEFAULT_HOST, get_port
 from app.lint_runner import lint
 from app.blueprint_generator import blueprint_generator
 from app.guardrails import guardrails
@@ -121,8 +121,8 @@ def create_brief():
 def list_briefs():
     """List all briefs."""
     try:
-        limit = request.args.get('limit', 50, type=int)
-        limit = min(max(1, limit), 100)  # Clamp between 1 and 100
+        limit = request.args.get('limit', DEFAULT_LIMIT, type=int)
+        limit = min(max(MIN_LIMIT, limit), MAX_LIMIT)  # Clamp between min and max
         
         briefs = brief_manager.list_briefs(limit)
         return jsonify({
@@ -236,8 +236,8 @@ def get_job(job_id):
 def list_jobs():
     """List all jobs."""
     try:
-        limit = request.args.get('limit', 50, type=int)
-        limit = min(max(1, limit), 100)  # Clamp between 1 and 100
+        limit = request.args.get('limit', DEFAULT_LIMIT, type=int)
+        limit = min(max(MIN_LIMIT, limit), MAX_LIMIT)  # Clamp between min and max
         
         brief_id = request.args.get('brief_id')  # Optional filter
         
@@ -275,7 +275,7 @@ def list_jobs():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host=DEFAULT_HOST, port=get_port())
 
 # Import the new modules
 from app.export_pack import export_pack_generator
@@ -362,8 +362,9 @@ def download_file(filename):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Import test harness
+# Import test harness and blueprint diff
 from app.test_harness import test_harness
+from app.blueprint_diff import blueprint_diff
 
 @app.post("/test/payloads")
 def create_test_payload():
@@ -510,6 +511,142 @@ def get_test_summary():
             "ok": True,
             "summary": summary
         })
-        
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.post("/blueprints/diff")
+def diff_blueprints():
+    """Compare two blueprints and return differences."""
+    try:
+        data = request.get_json(force=True, silent=False)
+
+        blueprint1 = data.get("blueprint1")
+        blueprint2 = data.get("blueprint2")
+        output_format = data.get("format", "json")  # "json" or "text"
+
+        if not blueprint1 or not blueprint2:
+            return jsonify({"ok": False, "error": "Both blueprint1 and blueprint2 are required"}), 400
+
+        # Perform the diff
+        diff_result = blueprint_diff.compare_blueprints(blueprint1, blueprint2)
+
+        if output_format == "text":
+            # Return human-readable text format
+            diff_text = blueprint_diff.format_diff_human_readable(diff_result)
+            return jsonify({
+                "ok": True,
+                "diff": diff_text,
+                "format": "text",
+                "summary": diff_result.summary,
+                "is_identical": diff_result.is_identical
+            })
+        else:
+            # Return structured JSON format
+            diff_json = blueprint_diff.format_diff_json(diff_result)
+            return jsonify({
+                "ok": True,
+                "diff": diff_json,
+                "format": "json"
+            })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.post("/jobs/<job_id>/diff")
+def diff_job_blueprint():
+    """Compare a job's blueprint with another blueprint."""
+    try:
+        data = request.get_json(force=True, silent=False)
+        other_blueprint = data.get("blueprint")
+        output_format = data.get("format", "json")
+
+        if not other_blueprint:
+            return jsonify({"ok": False, "error": "Blueprint to compare is required"}), 400
+
+        # Get the job
+        job = brief_manager.get_job(job_id)
+        if not job:
+            return jsonify({"ok": False, "error": "Job not found"}), 404
+
+        # Check if job has a blueprint result
+        if not job.result or "blueprint" not in job.result:
+            return jsonify({"ok": False, "error": "Job has no blueprint to compare"}), 400
+
+        job_blueprint = job.result["blueprint"]
+
+        # Perform the diff
+        diff_result = blueprint_diff.compare_blueprints(job_blueprint, other_blueprint)
+
+        if output_format == "text":
+            diff_text = blueprint_diff.format_diff_human_readable(diff_result)
+            return jsonify({
+                "ok": True,
+                "diff": diff_text,
+                "format": "text",
+                "summary": diff_result.summary,
+                "is_identical": diff_result.is_identical,
+                "job_id": job_id
+            })
+        else:
+            diff_json = blueprint_diff.format_diff_json(diff_result)
+            return jsonify({
+                "ok": True,
+                "diff": diff_json,
+                "format": "json",
+                "job_id": job_id
+            })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.get("/jobs/<job_id>/compare/<other_job_id>")
+def compare_job_blueprints(job_id, other_job_id):
+    """Compare blueprints from two different jobs."""
+    try:
+        output_format = request.args.get("format", "json")
+
+        # Get both jobs
+        job1 = brief_manager.get_job(job_id)
+        job2 = brief_manager.get_job(other_job_id)
+
+        if not job1:
+            return jsonify({"ok": False, "error": f"Job {job_id} not found"}), 404
+        if not job2:
+            return jsonify({"ok": False, "error": f"Job {other_job_id} not found"}), 404
+
+        # Check if both jobs have blueprint results
+        if not job1.result or "blueprint" not in job1.result:
+            return jsonify({"ok": False, "error": f"Job {job_id} has no blueprint to compare"}), 400
+        if not job2.result or "blueprint" not in job2.result:
+            return jsonify({"ok": False, "error": f"Job {other_job_id} has no blueprint to compare"}), 400
+
+        blueprint1 = job1.result["blueprint"]
+        blueprint2 = job2.result["blueprint"]
+
+        # Perform the diff
+        diff_result = blueprint_diff.compare_blueprints(blueprint1, blueprint2)
+
+        if output_format == "text":
+            diff_text = blueprint_diff.format_diff_human_readable(diff_result)
+            return jsonify({
+                "ok": True,
+                "diff": diff_text,
+                "format": "text",
+                "summary": diff_result.summary,
+                "is_identical": diff_result.is_identical,
+                "job1_id": job_id,
+                "job2_id": other_job_id
+            })
+        else:
+            diff_json = blueprint_diff.format_diff_json(diff_result)
+            return jsonify({
+                "ok": True,
+                "diff": diff_json,
+                "format": "json",
+                "job1_id": job_id,
+                "job2_id": other_job_id
+            })
+
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
