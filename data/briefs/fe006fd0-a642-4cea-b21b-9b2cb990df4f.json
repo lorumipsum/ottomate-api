@@ -1,0 +1,6 @@
+{
+  "id": "fe006fd0-a642-4cea-b21b-9b2cb990df4f",
+  "content": "When a new contact is created in HubSpot, I need to:\n        1. Append the contact details (email, first_name, last_name) to a Google Sheets document\n        2. Send a notification to the #sales-alerts Slack channel with the new contact information\n\n        The Google Sheet should be updated with email, first_name, and last_name in separate columns.\n        The Slack message should include the full name and email address.",
+  "created_at": 1758063053.786643,
+  "metadata": {}
+}

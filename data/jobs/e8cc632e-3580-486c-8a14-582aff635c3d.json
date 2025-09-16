@@ -1,0 +1,64 @@
+{
+  "id": "e8cc632e-3580-486c-8a14-582aff635c3d",
+  "brief_id": "fe006fd0-a642-4cea-b21b-9b2cb990df4f",
+  "status": "completed",
+  "created_at": 1758063053.786835,
+  "started_at": 1758063053.787031,
+  "completed_at": 1758063053.787561,
+  "result": {
+    "blueprint": {
+      "version": "v1.0",
+      "triggerId": "hubspot-trigger",
+      "modules": [
+        {
+          "id": "hubspot-trigger",
+          "type": "trigger",
+          "name": "HubSpot New Contact",
+          "params": {
+            "app": "HubSpot",
+            "trigger_type": "new_contact"
+          }
+        },
+        {
+          "id": "sheets-action",
+          "type": "action",
+          "name": "Google Sheets Append Row",
+          "params": {
+            "app": "Google Sheets",
+            "action_type": "append_row",
+            "spreadsheet_id": "{{hubspot-trigger.spreadsheet_url}}",
+            "range": "A:C",
+            "values": [
+              "{{hubspot-trigger.email}}",
+              "{{hubspot-trigger.first_name}}",
+              "{{hubspot-trigger.last_name}}"
+            ]
+          }
+        },
+        {
+          "id": "slack-action",
+          "type": "action",
+          "name": "Send Slack Message",
+          "params": {
+            "app": "Slack",
+            "action_type": "send_message",
+            "channel": "#sales-alerts",
+            "message": "New HubSpot contact: {{hubspot-trigger.first_name}} {{hubspot-trigger.last_name}} ({{hubspot-trigger.email}})"
+          }
+        }
+      ],
+      "connections": [
+        {
+          "from": "hubspot-trigger",
+          "to": "sheets-action"
+        },
+        {
+          "from": "sheets-action",
+          "to": "slack-action"
+        }
+      ]
+    },
+    "generated_at": 1758063053.787561
+  },
+  "error": null
+}

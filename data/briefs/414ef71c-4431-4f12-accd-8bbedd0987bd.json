@@ -1,0 +1,6 @@
+{
+  "id": "414ef71c-4431-4f12-accd-8bbedd0987bd",
+  "content": "When someone submits a Typeform response, I need to:\n        1. Create a new record in Airtable with the form submission data (name, email, interest)\n        2. Create a draft reply email in Gmail addressed to the submitter\n\n        The Airtable record should capture the name, email, and their area of interest.\n        The Gmail draft should be personalized with their name and a template response about their interest.",
+  "created_at": 1758063096.868308,
+  "metadata": {}
+}

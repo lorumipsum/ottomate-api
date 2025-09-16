@@ -1,0 +1,66 @@
+{
+  "id": "8c3de7c5-15d7-4f11-8de9-c9e8589e4926",
+  "brief_id": "414ef71c-4431-4f12-accd-8bbedd0987bd",
+  "status": "completed",
+  "created_at": 1758063096.868643,
+  "started_at": 1758063096.869133,
+  "completed_at": 1758063096.869865,
+  "result": {
+    "blueprint": {
+      "version": "v1.0",
+      "triggerId": "typeform-trigger",
+      "modules": [
+        {
+          "id": "typeform-trigger",
+          "type": "trigger",
+          "name": "Typeform New Entry",
+          "params": {
+            "app": "Typeform",
+            "trigger_type": "new_entry",
+            "form_id": "{{form_id}}"
+          }
+        },
+        {
+          "id": "airtable-action",
+          "type": "action",
+          "name": "Airtable Create Record",
+          "params": {
+            "app": "Airtable",
+            "action_type": "create_record",
+            "base_id": "{{base_id}}",
+            "table_name": "Leads",
+            "fields": {
+              "Name": "{{typeform-trigger.name}}",
+              "Email": "{{typeform-trigger.email}}",
+              "Interest": "{{typeform-trigger.interest}}"
+            }
+          }
+        },
+        {
+          "id": "gmail-action",
+          "type": "action",
+          "name": "Gmail Create Draft",
+          "params": {
+            "app": "Gmail",
+            "action_type": "create_draft",
+            "to": "{{typeform-trigger.email}}",
+            "subject": "Thank you for your interest, {{typeform-trigger.name}}",
+            "body": "Hi {{typeform-trigger.name}},\n\nThank you for your interest in {{typeform-trigger.interest}}. We'll be in touch soon!\n\nBest regards,\nThe Team"
+          }
+        }
+      ],
+      "connections": [
+        {
+          "from": "typeform-trigger",
+          "to": "airtable-action"
+        },
+        {
+          "from": "airtable-action",
+          "to": "gmail-action"
+        }
+      ]
+    },
+    "generated_at": 1758063096.869865
+  },
+  "error": null
+}

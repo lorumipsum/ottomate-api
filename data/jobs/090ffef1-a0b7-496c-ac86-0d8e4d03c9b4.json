@@ -1,0 +1,45 @@
+{
+  "id": "090ffef1-a0b7-496c-ac86-0d8e4d03c9b4",
+  "brief_id": "39570119-98aa-442f-9de6-1664816e2383",
+  "status": "completed",
+  "created_at": 1758063020.1983051,
+  "started_at": 1758063020.1984892,
+  "completed_at": 1758063020.199358,
+  "result": {
+    "blueprint": {
+      "version": "v1.0",
+      "triggerId": "gmail-trigger",
+      "modules": [
+        {
+          "id": "gmail-trigger",
+          "type": "trigger",
+          "name": "Gmail New Email",
+          "params": {
+            "app": "Gmail",
+            "trigger_type": "new_email",
+            "filter": "When a new contact is created in HubSpot, I need to:\n        1. Append the contact details (email, first_name, last_name) to a Google Sheets document\n        2. Send a notification to the #sales-alerts Slack channel with the new contact information\n\n        The Google Sheet should be updated with email, first_name, and last_name in separate columns.\n        The Slack message should include the full name and email address."
+          }
+        },
+        {
+          "id": "slack-action",
+          "type": "action",
+          "name": "Send Slack Message",
+          "params": {
+            "app": "Slack",
+            "action_type": "send_message",
+            "channel": "#alerts",
+            "message": "New email: When a new contact is created in HubSpot, I need to:\n        1. Append the contact details (email, first_name, last_name) to a Google Sheets document\n        2. Send a notification to the #sales-alerts Slack channel with the new contact information\n\n        The Google Sheet should be updated with email, first_name, and last_name in separate columns.\n        The Slack message should include the full name and email address."
+          }
+        }
+      ],
+      "connections": [
+        {
+          "from": "gmail-trigger",
+          "to": "slack-action"
+        }
+      ]
+    },
+    "generated_at": 1758063020.199358
+  },
+  "error": null
+}
